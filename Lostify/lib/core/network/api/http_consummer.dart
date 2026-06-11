@@ -196,6 +196,24 @@ class ServerException implements Exception {
   String toString() => errorMessage;
 }
 
+String _extractApiErrorMessage(DioException e) {
+  final data = e.response?.data;
+  if (data is Map) {
+    for (final value in data.values) {
+      if (value is List && value.isNotEmpty) {
+        return value.first.toString();
+      }
+      if (value is String && value.isNotEmpty) {
+        return value;
+      }
+    }
+  }
+  if (data is String && data.isNotEmpty) {
+    return data;
+  }
+  return e.message ?? e.toString();
+}
+
 void handleDioExceptions(DioException e) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
@@ -205,20 +223,8 @@ void handleDioExceptions(DioException e) {
     case DioExceptionType.cancel:
     case DioExceptionType.connectionError:
     case DioExceptionType.unknown:
-      throw ServerException(errorMessage: e.toString());
+      throw ServerException(errorMessage: e.message ?? e.toString());
     case DioExceptionType.badResponse:
-      switch (e.response?.statusCode) {
-        case 400:
-        case 401:
-        case 403:
-        case 404:
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-          throw ServerException(errorMessage: e.toString());
-        default:
-          throw ServerException(errorMessage: e.toString());
-      }
+      throw ServerException(errorMessage: _extractApiErrorMessage(e));
   }
 }

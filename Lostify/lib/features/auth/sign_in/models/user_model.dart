@@ -8,9 +8,11 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      username: json['username'],
-      token: json['tokens'] != null ? Tokens.fromJson(json['tokens']) : null,
+      id: (json['id'] as num).toInt(),
+      username: json['username'] as String,
+      token: json['tokens'] != null
+          ? Tokens.fromJson(Map<String, dynamic>.from(json['tokens'] as Map))
+          : null,
     );
   }
 

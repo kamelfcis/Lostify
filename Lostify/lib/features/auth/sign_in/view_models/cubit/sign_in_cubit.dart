@@ -23,20 +23,42 @@ class SignInCubit extends Cubit<SignInState> {
     if (formKey.currentState!.validate()) {
       emit(SignInLoading());
       try {
-        var response = await apiConsumer.post(
+        final username = emailController.text.trim();
+        final password = passwordController.text;
+        final response = await apiConsumer.post(
           EndPoints.login,
           data: {
-            ApiKeys.userName: emailController.text,
-            ApiKeys.password: passwordController.text,
+            ApiKeys.userName: username,
+            ApiKeys.password: password,
           },
         );
-        authResponse = AuthResponse.fromJson(response);
+        authResponse = AuthResponse.fromJson(
+          Map<String, dynamic>.from(response as Map),
+        );
         await saveUserData();
         emit(SignInSuccess());
-      } on Exception catch (e) {
-        emit(SignInFailure(message: e.toString()));
+      } catch (e, stackTrace) {
+        log('Sign in failed', error: e, stackTrace: stackTrace);
+        emit(SignInFailure(message: _loginErrorMessage(e)));
       }
     }
+  }
+
+  String _loginErrorMessage(Object error) {
+    final message = error.toString();
+    if (message.contains('127.0.0.1') ||
+        message.contains('localhost') ||
+        message.contains('Connection refused') ||
+        message.contains('connection error') ||
+        message.contains('Connection timed out')) {
+      return 'Cannot reach the API. Stop the app and run:\n'
+          'flutter run --dart-define-from-file=dart_defines.json';
+    }
+    if (message.contains('Invalid credentials') ||
+        message.contains('non_field_errors')) {
+      return 'Invalid username or password';
+    }
+    return 'Login failed. Please try again.';
   }
 
   Future<void> saveUserData() async {

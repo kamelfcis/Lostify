@@ -6,8 +6,8 @@ class Tokens {
 
   factory Tokens.fromJson(Map<String, dynamic> json) {
     return Tokens(
-      refresh: json['refresh'],
-      access: json['access'],
+      refresh: json['refresh'] as String,
+      access: json['access'] as String,
     );
   }
 

@@ -19,7 +19,11 @@ Future<void> main() async {
     url: EnvConfig.supabaseUrl,
     anonKey: EnvConfig.supabaseAnonKey,
   );
-  setupDI();
+  await setupDI();
+  assert(() {
+    debugPrint('Lostify API base URL: ${EnvConfig.apiBaseUrl}');
+    return true;
+  }());
   runApp(
     DevicePreview(
       enabled: false,

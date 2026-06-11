@@ -1,10 +1,10 @@
-import 'package:lostify/core/network/api/end_points.dart';
+import 'package:dio/dio.dart';
 import 'package:lostify/features/user/items/cubit/get_found_items_cubit.dart';
 import 'package:lostify/features/user/search/view_models/cubit/search_cubit.dart';
 import 'package:http/http.dart' as http;
 import 'package:lostify/core/cache/cache_helper.dart';
 import 'package:lostify/core/network/api/api_consumer.dart';
-import 'package:lostify/core/network/api/http_consummer.dart';
+import 'package:lostify/core/network/api/dio_consumer.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,9 +20,8 @@ Future<void> setupDI() async {
       () => GetFoundItemsCubit(apiConsumer: getIt<ApiConsumer>()));
   getIt.registerLazySingleton<SearchCubit>(
       () => SearchCubit(apiConsumer: getIt<ApiConsumer>()));
+  getIt.registerLazySingleton<Dio>(() => Dio());
   getIt.registerLazySingleton<ApiConsumer>(
-    () => HttpConsumer(
-      baseUrl: EndPoints.baseurl,
-    ),
+    () => DioConsumer(dio: getIt<Dio>()),
   );
 }

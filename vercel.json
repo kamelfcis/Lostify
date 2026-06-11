@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "installCommand": "cd Lostify-Front-End && npm install && cd .. && pip install -r Lostify-Back-End/requirements.txt && cd Lostify-Back-End && python manage.py collectstatic --noinput && python manage.py migrate --noinput",
+  "builds": [
+    {
+      "src": "Lostify-Front-End/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "Lostify-Back-End/serverless/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "includeFiles": "Lostify-Back-End/**"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
+    { "src": "/admin/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
+    { "src": "/static/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "Lostify-Front-End/dist/$1" }
+  ]
+}

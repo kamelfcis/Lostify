@@ -31,8 +31,10 @@ This repository is a **monorepo** containing three applications that share a com
            └──────────┬─────────────┘
                       │
            ┌──────────┴───────────┐
-           │  SQLite (default)    │
-           │  Media file uploads  │
+           │  SQLite (local dev)  │
+           │  Turso (production)  │
+           │  Local media /       │
+           │  Cloudinary (prod)   │
            └──────────────────────┘
 
 Mobile app additionally uses Supabase for real-time chat and image storage.
@@ -59,8 +61,9 @@ Mobile app additionally uses Supabase for real-time chat and image storage.
 - **Django 5.1.6** + **Django REST Framework 3.15**
 - **SimpleJWT** for authentication
 - **django-cors-headers**, **Pillow** (images), **Jazzmin** (admin UI)
-- **SQLite** database (default, file: `db.sqlite3`)
-- **Waitress** (production WSGI server, listed in requirements)
+- **SQLite** database locally (`db.sqlite3`); **Turso** (libSQL) in production on Vercel
+- **Cloudinary** for media uploads in production; local filesystem in dev
+- **WhiteNoise** for static files; **Waitress** for optional non-Vercel hosting
 
 ### Mobile (`Lostify/`)
 
@@ -183,15 +186,19 @@ Loaded via `python-decouple` in `backend/settings.py`.
 | `SECRET_KEY` | Django secret key | Dev-only placeholder |
 | `DEBUG` | Debug mode | `True` |
 | `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
+| `TURSO_DATABASE_URL` | Turso HTTP URL (production) | *(empty → local SQLite)* |
+| `TURSO_AUTH_TOKEN` | Turso database auth token | *(required with Turso URL)* |
+| `CLOUDINARY_URL` | Cloudinary credentials URL | *(empty → local `media/`)* |
 | `CORS_ALLOWED_ORIGINS` | Allowed frontend origins | `http://localhost:5173,...` |
 | `CSRF_TRUSTED_ORIGINS` | Trusted CSRF origins | `http://localhost:5173,...` |
 | `MEDIA_URL` | Public URL for uploaded media | `/media/` |
+| `STATIC_URL` | Public URL for static files | `/static/` |
 
 ### Frontend (`Lostify-Front-End/.env.example`)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | `http://127.0.0.1:8000/api/` |
+| `VITE_API_BASE_URL` | Backend API base URL | `http://127.0.0.1:8000/api/` (local) or `/api/` (Vercel) |
 
 Used by `src/lib/api.ts` (`apiUrl`, `mediaUrl`).
 
@@ -215,7 +222,8 @@ Passed via `flutter run --dart-define-from-file=dart_defines.json`. Read in `lib
 |-------------|-------------|-----------------|
 | Local dev | `http://127.0.0.1:8000/api/` | Defaults in all apps |
 | Android emulator | `http://10.0.2.2:8000/api/` | `API_BASE_URL` in `dart_defines.json` |
-| Production | `https://your-domain.com:9443/api/` | `.env` / `dart_defines.json` |
+| Vercel (web) | `/api/` (same origin) | `VITE_API_BASE_URL` on Vercel |
+| Production (mobile) | `https://your-app.vercel.app/api/` | `API_BASE_URL` in `dart_defines.json` |
 
 **Frontend:** `VITE_API_BASE_URL` in `.env` → `src/lib/api.ts`
 
@@ -244,6 +252,7 @@ Passed via `flutter run --dart-define-from-file=dart_defines.json`. Read in `lib
 ```
 Fien Lost/
 ├── README.md                 # This file
+├── vercel.json               # Vercel monorepo build & route config
 ├── .gitignore                # Monorepo-wide ignore rules
 ├── logo.jpeg                 # Project logo
 │
@@ -260,6 +269,7 @@ Fien Lost/
 │   ├── .env.example
 │   ├── manage.py
 │   ├── requirements.txt
+│   ├── serverless/index.py   # Vercel WSGI entry point
 │   ├── api/                  # Models, views, serializers, URLs
 │   ├── backend/              # Django settings, WSGI
 │   ├── static/               # Admin static assets
@@ -279,11 +289,144 @@ Fien Lost/
 
 ---
 
+## Deploying to Vercel (Frontend + Backend — One Project)
+
+The monorepo deploys as a **single Vercel project**: React SPA at `/`, Django REST API at `/api/*`, Django admin at `/admin/*`, and collected static files at `/static/*`. Configuration lives in the repo root [`vercel.json`](vercel.json).
+
+```
+Browser
+   │
+   ▼
+Vercel (one project)
+   ├── /              → React SPA (Lostify-Front-End/dist)
+   ├── /api/*         → Django serverless (Lostify-Back-End/serverless/index.py)
+   ├── /admin/*       → Django admin
+   └── /static/*      → WhiteNoise collected static files
+           │
+           ├── Turso (persistent SQLite-compatible DB)
+           └── Cloudinary (image uploads for Ad / CardAd)
+```
+
+### Why Turso and Cloudinary?
+
+Vercel serverless functions have **no persistent disk**. Local `db.sqlite3` and `media/` uploads are lost on redeploy. Production therefore uses:
+
+- **[Turso](https://turso.tech/)** — cloud SQLite-compatible database (same Django models/migrations)
+- **[Cloudinary](https://cloudinary.com/)** — external storage for `ImageField` uploads
+
+Local development still uses `db.sqlite3` and the `media/` folder when `TURSO_*` and `CLOUDINARY_URL` are unset.
+
+### 1. Turso setup (manual — one time)
+
+1. Create a free account at [turso.tech](https://turso.tech/).
+2. Install the Turso CLI and create a database:
+   ```bash
+   turso db create lostify
+   turso db show lostify --url
+   turso db tokens create lostify
+   ```
+3. Copy the **database URL** → `TURSO_DATABASE_URL` and **auth token** → `TURSO_AUTH_TOKEN`.
+4. Run migrations against Turso from your machine (recommended before first deploy):
+   ```bash
+   cd Lostify-Back-End
+   # Windows PowerShell
+   $env:TURSO_DATABASE_URL="https://your-db-org.turso.io"
+   $env:TURSO_AUTH_TOKEN="your-token"
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
+5. Optionally seed `ItemType` / `CardType` rows via Django admin or fixtures.
+
+### 2. Cloudinary setup (manual — one time)
+
+1. Create a free account at [cloudinary.com](https://cloudinary.com/).
+2. From the dashboard, copy the **Environment variable** value (format: `cloudinary://key:secret@cloud_name`).
+3. Set it as `CLOUDINARY_URL` on Vercel. Uploaded ad images will return `https://res.cloudinary.com/...` URLs automatically.
+
+### 3. Vercel project setup
+
+1. Push this repo to GitHub.
+2. In [Vercel Dashboard](https://vercel.com) → **New Project** → import the repo.
+3. Set **Root Directory** to the monorepo root (folder containing `vercel.json`).
+4. Add the environment variables below (Production + Preview as needed).
+5. Deploy. The root `installCommand` runs `collectstatic` and `migrate` during build.
+
+### 4. Vercel environment variables
+
+#### Backend (runtime — Django serverless)
+
+| Variable | Example / notes | Required in prod |
+|----------|-----------------|------------------|
+| `SECRET_KEY` | Long random string | Yes |
+| `DEBUG` | `False` | Yes |
+| `ALLOWED_HOSTS` | `.vercel.app,your-app.vercel.app` | Yes |
+| `CSRF_TRUSTED_ORIGINS` | `https://your-app.vercel.app` | Yes |
+| `CORS_ALLOWED_ORIGINS` | `https://your-app.vercel.app` | Yes (mobile / cross-origin) |
+| `TURSO_DATABASE_URL` | `https://your-db-org.turso.io` | Yes |
+| `TURSO_AUTH_TOKEN` | Turso JWT token | Yes |
+| `CLOUDINARY_URL` | `cloudinary://key:secret@cloud_name` | Yes (for image uploads) |
+| `STATIC_URL` | `/static/` | Optional (default) |
+| `MEDIA_URL` | `/media/` | Optional (Cloudinary URLs override file paths) |
+
+#### Frontend (build-time — Vite)
+
+| Variable | Example / notes | Required in prod |
+|----------|-----------------|------------------|
+| `VITE_API_BASE_URL` | `/api/` | Yes |
+
+Same-origin `/api/` avoids CORS issues for the web app.
+
+### 5. Mobile app (Flutter) — production API URL
+
+The Flutter app does **not** deploy with this Vercel project. Point it at your deployed backend:
+
+```json
+// Lostify/dart_defines.json (do not commit — copy from dart_defines.json.example)
+{
+  "API_BASE_URL": "https://your-app.vercel.app/api/"
+}
+```
+
+Run with:
+
+```bash
+cd Lostify
+flutter run --dart-define-from-file=dart_defines.json
+```
+
+Keep `SUPABASE_URL` / `SUPABASE_ANON_KEY` for mobile chat; only `API_BASE_URL` changes for production Django.
+
+### 6. Local dev vs production
+
+| Concern | Local dev | Vercel production |
+|---------|-----------|-------------------|
+| Database | `Lostify-Back-End/db.sqlite3` | Turso (`TURSO_*` env vars) |
+| Media uploads | `Lostify-Back-End/media/` | Cloudinary (`CLOUDINARY_URL`) |
+| API base URL (web) | `http://127.0.0.1:8000/api/` | `/api/` (same origin) |
+| Static/admin CSS | Django dev server | WhiteNoise + `collectstatic` at build |
+| CORS | `http://localhost:5173` in `.env` | Your Vercel URL in env vars |
+
+### 7. Smoke test checklist (after deploy)
+
+- [ ] `https://your-app.vercel.app/` loads the React app
+- [ ] `https://your-app.vercel.app/api/item-types/` returns JSON
+- [ ] Register a new user via the web UI
+- [ ] Log in and obtain JWT (`/api/token/` or `/api/login/`)
+- [ ] Post a lost/found ad **with an image** (verify Cloudinary URL in response)
+- [ ] Browse ads on the home/search pages
+- [ ] `https://your-app.vercel.app/admin/` loads (use superuser created against Turso)
+- [ ] Log out (refresh token blacklist)
+- [ ] Mobile app: set `API_BASE_URL` to Vercel URL and test login + list ads
+
+**Note:** First request to Django on Vercel may take several seconds (cold start). This is expected on the Hobby plan.
+
+---
+
 ## Common Issues & Troubleshooting
 
 ### CORS errors (frontend → backend)
 
-Ensure `CORS_ALLOW_ALL_ORIGINS = True` (currently set) or add your frontend origin to `CORS_ALLOWED_ORIGINS` in `backend/settings.py`.
+Add your frontend origin to `CORS_ALLOWED_ORIGINS` in `.env` (or Vercel env vars). On Vercel, set `VITE_API_BASE_URL=/api/` so the web app uses same-origin requests and avoids cross-origin calls entirely.
 
 ### Mobile cannot reach local backend
 
@@ -293,7 +436,7 @@ Ensure `CORS_ALLOW_ALL_ORIGINS = True` (currently set) or add your frontend orig
 
 ### SSL / certificate errors with production URL
 
-The production server uses HTTPS on port 9443. Local dev should use plain HTTP on port 8000.
+Vercel serves HTTPS automatically. Local dev should use plain HTTP on port 8000.
 
 ### `ModuleNotFoundError` (Python)
 
@@ -314,7 +457,7 @@ flutter run
 
 ### Images not loading
 
-In development, set `MEDIA_URL = '/media/'` in settings and ensure `DEBUG = True` so Django serves media files.
+In local development, leave `CLOUDINARY_URL` empty and ensure `DEBUG = True` so Django serves files from `media/`. In production on Vercel, set `CLOUDINARY_URL` — uploaded images return full `https://res.cloudinary.com/...` URLs automatically.
 
 ### Database is empty
 

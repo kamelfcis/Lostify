@@ -25,12 +25,8 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
 ]
 
-# Serve static files only in development
+# Local dev only: WhiteNoise serves static in production; Cloudinary serves media URLs.
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-    # TEMPORARY fix for local development
-if not settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     

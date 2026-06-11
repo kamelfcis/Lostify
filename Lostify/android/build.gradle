@@ -1,3 +1,7 @@
+ext {
+    kotlin_version = '2.1.0'
+}
+
 allprojects {
     repositories {
         google()
@@ -8,6 +12,7 @@ allprojects {
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.ext.kotlin_version = rootProject.ext.kotlin_version
 }
 subprojects {
     project.evaluationDependsOn(":app")

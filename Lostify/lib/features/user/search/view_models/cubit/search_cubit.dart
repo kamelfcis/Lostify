@@ -2,9 +2,10 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:lostify/app/my_app.dart';
-import 'package:lostify/core/config/env_config.dart';
+import 'package:lostify/core/cache/cache_helper.dart';
 import 'package:lostify/core/constants/app_constants.dart';
-import 'package:lostify/core/helper/clasify_image_with_gemini.dart';
+import 'package:lostify/core/di/dependancy_injection.dart';
+import 'package:lostify/core/helper/classify_image_via_api.dart';
 import 'package:lostify/core/helper/date_timr_helper.dart';
 import 'package:lostify/core/helper/filter_helper.dart';
 import 'package:lostify/core/helper/location_helper.dart';
@@ -21,7 +22,6 @@ class SearchCubit extends Cubit<SearchState> {
   List<ItemModel> filteredItems = [];
   List<ItemModel> searchedItems = [];
   String classificationResult = '';
-  final String apiKey = EnvConfig.geminiApiKey;
   String? itemStatus;
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
@@ -95,11 +95,11 @@ class SearchCubit extends Cubit<SearchState> {
   Future<void> searchByImage({required File selectedImage}) async {
     try {
       emit(GetItemsByImageLoading());
-      final categoryNames = AppConstants.categories.map((e) => e.name).toList();
-      classificationResult = await classifyImageWithGemini(
+      final token = getIt<CacheHelper>().getUserModel()?.token?.access;
+      classificationResult = await classifyImageViaApi(
+        apiConsumer: apiConsumer,
         selectedImage: selectedImage,
-        categoryNames: categoryNames,
-        apiKey: apiKey,
+        token: token,
       );
       filteredItems = allItems
           .where(

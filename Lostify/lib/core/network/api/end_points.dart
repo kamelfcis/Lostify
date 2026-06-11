@@ -11,6 +11,7 @@ class EndPoints {
   static const String getItemTypes = 'item-types/';
   static const String cardTypes = 'card-types/';
   static const String cardAds = 'card-ads/';
+  static const String searchByImage = 'search/by-image/';
 }
 
 class ApiKeys {

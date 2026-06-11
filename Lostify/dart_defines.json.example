@@ -1,6 +1,5 @@
 {
   "SUPABASE_URL": "https://your-project-id.supabase.co",
   "SUPABASE_ANON_KEY": "your-supabase-anon-key",
-  "API_BASE_URL": "http://127.0.0.1:8000/api/",
-  "GEMINI_API_KEY": "your-gemini-api-key"
+  "API_BASE_URL": "https://lostify-ruddy.vercel.app/api/"
 }

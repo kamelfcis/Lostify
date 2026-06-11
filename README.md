@@ -89,58 +89,68 @@ Optional: Android Studio / Xcode for mobile device builds; Postman for API testi
 
 ---
 
-## Getting Started
+## Clone & Run on Another PC
 
-### 1. Clone the repository
+### Clone
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/kamelfcis/Lostify.git
 cd "Fien Lost"
 ```
 
-> **Note:** Initialize git inside the `Fien Lost` folder if this is a new monorepo. The parent `Graduation Project 2025` directory may contain unrelated projects — use this folder as the git root.
+> The git root is the `Fien Lost` folder. The parent `Graduation Project 2025` directory may contain other unrelated projects.
 
-### 2. Backend setup & run
+### Backend (Django)
+
+**Prerequisites:** Python 3.12+
 
 ```bash
 cd Lostify-Back-End
 
 # Create and activate virtual environment
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-# source venv/bin/activate
+venv\Scripts\activate         # Windows
+# source venv/bin/activate    # macOS / Linux
 
 pip install -r requirements.txt
 
-# Copy environment template and set SECRET_KEY (required for production)
-copy .env.example .env   # Windows
-# cp .env.example .env   # macOS / Linux
+# Copy env template and fill in required values
+copy .env.example .env        # Windows
+# cp .env.example .env        # macOS / Linux
 
-# Run migrations and create admin user
+# Run migrations and optionally create admin user
 python manage.py migrate
 python manage.py createsuperuser
 
-# Start development server
+# Start dev server
 python manage.py runserver
 ```
 
 The API is available at **http://127.0.0.1:8000/api/**  
 Admin panel: **http://127.0.0.1:8000/admin/**
 
-### 3. Frontend setup & run
+**Required `.env` variables for full functionality:**
+
+| Variable | Description |
+|----------|-------------|
+| `SECRET_KEY` | Django secret key (any long random string for dev) |
+| `TURSO_DATABASE_URL` | Turso HTTP URL — omit to use local SQLite |
+| `TURSO_AUTH_TOKEN` | Turso auth token — omit with local SQLite |
+| `CLOUDINARY_URL` | `cloudinary://key:secret@cloud_name` — omit to use local `media/` |
+| `GEMINI_API_KEY` | Google Gemini key for `POST /api/search/by-image/` — optional |
+
+### Frontend (React / Vite)
+
+**Prerequisites:** Node 18+
 
 ```bash
 cd Lostify-Front-End
 
 npm install
 
-# Configure API URL (defaults to localhost if omitted)
-copy .env.example .env   # Windows
-# cp .env.example .env   # macOS / Linux
+# Copy env template
+copy .env.example .env        # Windows
+# cp .env.example .env        # macOS / Linux
 
 npm run dev
 ```
@@ -149,27 +159,74 @@ The web app runs at **http://localhost:5173**
 
 API requests use `VITE_API_BASE_URL` from `.env` via `src/lib/api.ts` (defaults to `http://127.0.0.1:8000/api/`).
 
-### 4. Mobile app setup & run
+**Required `.env` variable:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VITE_API_BASE_URL` | Backend API base URL | `http://127.0.0.1:8000/api/` |
+
+### Mobile (Flutter)
+
+**Prerequisites:** Flutter 3.x, Android Studio / Android SDK
+
+The app ships with **production defaults embedded** in `lib/core/config/env_config.dart` — a plain `flutter run` points to the live Vercel deployment with no extra config required:
 
 ```bash
 cd Lostify
 
 flutter pub get
 
-# Copy secrets template and fill in real values (never commit dart_defines.json)
-copy dart_defines.json.example dart_defines.json   # Windows
-# cp dart_defines.json.example dart_defines.json   # macOS / Linux
-
-# Google Maps: add GOOGLE_MAPS_API_KEY to android/local.properties
-# (copy android/local.properties.example if you do not have local.properties yet)
-
-# Run on connected device or emulator
-flutter run --dart-define-from-file=dart_defines.json
+# Quick run against production backend — works out of the box
+flutter run
 ```
 
-For Android emulator, set `API_BASE_URL` to `http://10.0.2.2:8000/api/` in `dart_defines.json` (maps to host `localhost`).
+For a **custom backend** or to enable Google Maps:
 
-See `Lostify/.env.example` and `Lostify/dart_defines.json.example` for all mobile variables.
+```bash
+# 1. Copy the example file
+copy dart_defines.json.example dart_defines.json    # Windows
+# cp dart_defines.json.example dart_defines.json    # macOS / Linux
+
+# 2. Fill in dart_defines.json (see table below), then run
+flutter run --dart-define-from-file=dart_defines.json
+
+# 3. Google Maps key: copy and fill android/local.properties
+copy android\local.properties.example android\local.properties
+#    Set sdk.dir (from `flutter doctor`) and GOOGLE_MAPS_API_KEY
+```
+
+> `dart_defines.json` is gitignored — never commit it.
+
+**Keys for full functionality (`dart_defines.json`):**
+
+| Key | Description | Production default |
+|-----|-------------|-------------------|
+| `SUPABASE_URL` | Supabase project URL | Embedded in app |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key (public by design) | Embedded in app |
+| `API_BASE_URL` | Django REST API base URL | `https://lostify-ruddy.vercel.app/api/` |
+| `GOOGLE_MAPS_API_KEY` | Google Maps key (set in `android/local.properties`) | *(maps disabled without key)* |
+
+**Android emulator against local backend:** set `API_BASE_URL` to `http://10.0.2.2:8000/api/` (maps host `localhost`).
+
+See `Lostify/.env.example` and `Lostify/dart_defines.json.example` for the full variable reference.
+
+### Production (already deployed)
+
+| Service | URL |
+|---------|-----|
+| Web app | <https://lostify-ruddy.vercel.app> |
+| REST API root | <https://lostify-ruddy.vercel.app/api/> |
+| Admin panel | <https://lostify-ruddy.vercel.app/admin/> |
+
+For a fresh Vercel re-deploy, the following environment variables must be set in the Vercel dashboard:
+
+| Variable | Purpose |
+|----------|---------|
+| `SECRET_KEY` | Django (always required) |
+| `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` | Persistent database |
+| `CLOUDINARY_URL` | Image uploads |
+| `GEMINI_API_KEY` | AI image search (`/api/search/by-image/`) |
+| `VITE_API_BASE_URL` | Frontend build — set to `/api/` |
 
 ---
 
@@ -208,11 +265,10 @@ Passed via `flutter run --dart-define-from-file=dart_defines.json`. Read in `lib
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL | (required) |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key | (required) |
-| `API_BASE_URL` | Django API base URL | `http://127.0.0.1:8000/api/` |
-| `GEMINI_API_KEY` | Google Gemini API key | (empty) |
-| `GOOGLE_MAPS_API_KEY` | Google Maps API key | `android/local.properties` |
+| `SUPABASE_URL` | Supabase project URL | Embedded (production project) |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key (public by design) | Embedded (production project) |
+| `API_BASE_URL` | Django API base URL | `https://lostify-ruddy.vercel.app/api/` |
+| `GOOGLE_MAPS_API_KEY` | Google Maps API key | set in `android/local.properties` |
 
 ---
 
@@ -223,7 +279,7 @@ Passed via `flutter run --dart-define-from-file=dart_defines.json`. Read in `lib
 | Local dev | `http://127.0.0.1:8000/api/` | Defaults in all apps |
 | Android emulator | `http://10.0.2.2:8000/api/` | `API_BASE_URL` in `dart_defines.json` |
 | Vercel (web) | `/api/` (same origin) | `VITE_API_BASE_URL` on Vercel |
-| Production (mobile) | `https://your-app.vercel.app/api/` | `API_BASE_URL` in `dart_defines.json` |
+| Production (mobile) | `https://lostify-ruddy.vercel.app/api/` | `API_BASE_URL` in `dart_defines.json` (default) |
 
 **Frontend:** `VITE_API_BASE_URL` in `.env` → `src/lib/api.ts`
 
@@ -383,7 +439,7 @@ The Flutter app does **not** deploy with this Vercel project. Point it at your d
 ```json
 // Lostify/dart_defines.json (do not commit — copy from dart_defines.json.example)
 {
-  "API_BASE_URL": "https://your-app.vercel.app/api/"
+  "API_BASE_URL": "https://lostify-ruddy.vercel.app/api/"
 }
 ```
 

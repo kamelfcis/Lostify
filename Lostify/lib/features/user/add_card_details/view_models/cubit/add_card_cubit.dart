@@ -123,6 +123,12 @@ class AddCardCubit extends Cubit<AddCardState> {
       return;
     }
 
+    final currentUser = cacheHelper.getUserModel();
+    if (currentUser == null) {
+      emit(AddCardError('You must be logged in to post a card ad.'));
+      return;
+    }
+
     if (formKey.currentState!.validate() &&
         selectedImage != null &&
         locationController.text.isNotEmpty) {
@@ -138,9 +144,9 @@ class AddCardCubit extends Cubit<AddCardState> {
           EndPoints.cardAds,
           data: {
             "user": {
-              "id": 7,
-              "username": userModel?.username,
-              "email": "${userModel?.username}@gmail.com",
+              "id": currentUser.id,
+              "username": currentUser.username,
+              "email": "${currentUser.username}@gmail.com",
               "location": null,
               "average_rating": null
             },
@@ -164,7 +170,7 @@ class AddCardCubit extends Cubit<AddCardState> {
             "is_resolved": false,
           },
           isformdata: true,
-          token: cacheHelper.getUserModel()!.token!.access,
+          token: currentUser.token!.access,
         );
         emit(AddCardSuccess());
       } catch (e) {

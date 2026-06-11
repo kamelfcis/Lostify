@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 from decouple import Csv, config
 
@@ -33,8 +34,12 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 CLOUDINARY_URL = config('CLOUDINARY_URL', default='')
-TURSO_DATABASE_URL = config('TURSO_DATABASE_URL', default='')
-TURSO_AUTH_TOKEN = config('TURSO_AUTH_TOKEN', default='')
+TURSO_DATABASE_URL = os.environ.get('TURSO_DATABASE_URL') or config(
+    'TURSO_DATABASE_URL', default=''
+)
+TURSO_AUTH_TOKEN = os.environ.get('TURSO_AUTH_TOKEN') or config(
+    'TURSO_AUTH_TOKEN', default=''
+)
 
 
 # Application definition
@@ -172,10 +177,11 @@ if TURSO_DATABASE_URL:
         }
     }
 else:
+    sqlite_name = os.environ.get('DJANGO_DB_PATH', str(BASE_DIR / 'db.sqlite3'))
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': sqlite_name,
         }
     }
 

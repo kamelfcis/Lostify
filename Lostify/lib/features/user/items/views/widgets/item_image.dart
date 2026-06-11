@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lostify/core/utilies/colors/app_colors.dart';
-import 'package:lostify/core/utilies/sizes/sized_config.dart';
 import 'package:lostify/core/utilies/styles/app_text_styles.dart';
 import 'package:lostify/features/user/items/models/item_model.dart';
 import 'package:lostify/features/user/items/views/widgets/item_status.dart';
@@ -17,8 +16,12 @@ class ItemImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Clamp the image area to a sensible range so it never overflows on tall
+    // screens (e.g. Samsung A56 832 dp) or shrinks too much on small ones.
+    final double imageHeight =
+        (MediaQuery.of(context).size.height * 0.18).clamp(120.0, 180.0);
     return SizedBox(
-      height: SizeConfig.height * 0.18,
+      height: imageHeight,
       child: Stack(
         children: [
           ClipRRect(
@@ -30,17 +33,17 @@ class ItemImage extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: SizeConfig.height * 0.01,
-            right: SizeConfig.width * 0.03,
+            top: 8,
+            right: 10,
             child: ItemStatus(status: lostFoundItemModel.status),
           ),
           Positioned(
-            bottom: SizeConfig.height * 0.01,
-            left: SizeConfig.width * 0.01,
+            bottom: 8,
+            left: 6,
             child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: SizeConfig.width * 0.02,
-                vertical: SizeConfig.height * 0.002,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 2,
               ),
               decoration: BoxDecoration(
                 color: AppColors.kPrimaryColor,

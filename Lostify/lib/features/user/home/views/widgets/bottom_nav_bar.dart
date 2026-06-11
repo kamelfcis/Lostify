@@ -11,8 +11,11 @@ class CustomBottomNabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Respect the system gesture-navigation inset so the nav bar content sits
+    // above the gesture pill on Samsung A56 and similar devices.
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: EdgeInsets.only(bottom: SizeConfig.height * 0.01),
+      padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset : 8),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.kPrimaryColor,

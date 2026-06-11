@@ -57,13 +57,37 @@ class SearchCubit extends Cubit<SearchState> {
     emit(SelectCategory());
   }
 
-  /// Search items by text query
+  /// Search items by text query (title, description, and card number for card ads)
   void searchItemsByText(String query) {
-    searchedItems = filteredItems
-        .where(
-          (item) => item.title.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList();
+    if (query.trim().isEmpty) {
+      searchedItems = List.from(filteredItems);
+      emit(GetItemsSuccess());
+      return;
+    }
+
+    final queryLower = query.toLowerCase();
+    final queryDigits = query.replaceAll(RegExp(r'\D'), '');
+    final isCardSearch =
+        selectedCategory?.toLowerCase() == 'visa' ||
+        selectedCategory?.toLowerCase() == 'national card' ||
+        queryDigits.length >= 4;
+
+    searchedItems = filteredItems.where((item) {
+      final titleMatch = item.title.toLowerCase().contains(queryLower);
+      final descMatch =
+          item.locationDescription.toLowerCase().contains(queryLower);
+
+      if (titleMatch || descMatch) return true;
+
+      if (isCardSearch &&
+          item.cardNumber != null &&
+          queryDigits.isNotEmpty) {
+        final adDigits = item.cardNumber!.replaceAll(RegExp(r'\D'), '');
+        if (adDigits.contains(queryDigits)) return true;
+      }
+
+      return false;
+    }).toList();
     emit(GetItemsSuccess());
   }
 

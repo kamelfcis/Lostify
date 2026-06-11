@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Clock, Filter, Image } from 'lucide-react';
+import { Search, MapPin, Clock, Filter, Image, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface SearchBarProps {
@@ -22,6 +22,9 @@ interface SearchBarProps {
   setCondition: (value: string) => void;
 
   onSearch: () => void;
+
+  onImageSearch?: (file: File) => void;
+  imageSearchLoading?: boolean;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -36,8 +39,19 @@ const SearchBar: React.FC<SearchBarProps> = ({
   condition,
   setCondition,
   onSearch,
+  onImageSearch,
+  imageSearchLoading = false,
 }) => {
   const navigate = useNavigate();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onImageSearch) {
+      onImageSearch(file);
+    }
+    e.target.value = '';
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,8 +192,14 @@ const SearchBar: React.FC<SearchBarProps> = ({
               variant="secondary"
               size="sm"
               className="flex items-center gap-1"
+              disabled={imageSearchLoading}
             >
-              <Image size={14} /> Search by Image
+              {imageSearchLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Image size={14} />
+              )}
+              {imageSearchLoading ? 'Classifying...' : 'Search by Image'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-3">
@@ -187,13 +207,29 @@ const SearchBar: React.FC<SearchBarProps> = ({
               <h4 className="font-medium">Upload an image to search</h4>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <p className="text-sm text-gray-500">Drag & drop or click to upload</p>
-                <Input type="file" className="hidden" id="image-upload" accept="image/*" />
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  id="image-upload"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={imageSearchLoading}
+                />
                 <Button
                   variant="outline"
                   className="mt-2"
-                  onClick={() => document.getElementById('image-upload')?.click()}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={imageSearchLoading || !onImageSearch}
                 >
-                  Select Image
+                  {imageSearchLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin mr-2" />
+                      Classifying...
+                    </>
+                  ) : (
+                    'Select Image'
+                  )}
                 </Button>
               </div>
             </div>

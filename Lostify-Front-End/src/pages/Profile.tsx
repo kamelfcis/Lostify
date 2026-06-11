@@ -28,6 +28,13 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from '@/components/ui/use-toast';
 import { apiUrl, mediaUrl } from '@/lib/api';
+import {
+  formatVisaInput,
+  validateVisa,
+  validateNationalCard,
+  isNationalCardType,
+  normalizeCardNumberForSubmit,
+} from '@/lib/cardValidation';
 
 interface Ad {
   id: number;
@@ -70,6 +77,13 @@ const Profile = () => {
   const [deleting, setDeleting] = useState(false);
   const [markFoundDialogOpen, setMarkFoundDialogOpen] = useState(false);
   const [markingFoundAd, setMarkingFoundAd] = useState<Ad | null>(null);
+  const [cardNumberError, setCardNumberError] = useState('');
+
+  const editingCardType = cardTypes.find(
+    (type) => type.id.toString() === String(editFormData.card_type_id)
+  );
+  const isEditVisaCard = editingCardType?.name?.toLowerCase() === 'visa';
+  const isEditNationalCard = isNationalCardType(editingCardType?.name);
 
   // Read currentUser from localStorage once, stable reference
   const [currentUser] = useState(() => {
@@ -157,6 +171,13 @@ const Profile = () => {
     setEditingAd(ad);
     // Format date_time for datetime-local input
     const dateTime = ad.date_time ? new Date(ad.date_time).toISOString().slice(0, 16) : '';
+    const cardTypeName = ad.card_type?.name;
+    let cardNumber = ad.card_number || '';
+    if (cardTypeName?.toLowerCase() === 'visa' && cardNumber) {
+      cardNumber = formatVisaInput(cardNumber);
+    }
+
+    setCardNumberError('');
     setEditFormData({
       title: ad.title || '',
       location_description: ad.location_description || '',
@@ -167,21 +188,73 @@ const Profile = () => {
       reward: ad.reward || '',
       item_type_id: ad.item_type?.id || '',
       card_type_id: ad.card_type?.id || '',
-      card_number: ad.card_number || '',
+      card_number: cardNumber,
     });
     setEditDialogOpen(true);
   };
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'card_type_id') {
+      setCardNumberError('');
+      setEditFormData((prev: any) => ({
+        ...prev,
+        card_type_id: value,
+        card_number: '',
+      }));
+      return;
+    }
+
+    if (name === 'card_number') {
+      const cardType = cardTypes.find((type) => type.id.toString() === String(editFormData.card_type_id));
+      const isVisa = cardType?.name?.toLowerCase() === 'visa';
+      const isNational = isNationalCardType(cardType?.name);
+
+      let nextValue = value;
+      if (isVisa) {
+        nextValue = formatVisaInput(value);
+      } else if (isNational) {
+        nextValue = value.replace(/\D/g, '').slice(0, 14);
+      }
+
+      setCardNumberError('');
+      setEditFormData((prev: any) => ({
+        ...prev,
+        card_number: nextValue,
+      }));
+      return;
+    }
+
     setEditFormData((prev: any) => ({
       ...prev,
       [name]: value,
     }));
   };
 
+  const validateEditCardNumber = (): boolean => {
+    if (!editingAd?.isCardAd) return true;
+
+    if (isEditVisaCard) {
+      const error = validateVisa(editFormData.card_number || '');
+      setCardNumberError(error ?? '');
+      return !error;
+    }
+    if (isEditNationalCard) {
+      const error = validateNationalCard(editFormData.card_number || '');
+      setCardNumberError(error ?? '');
+      return !error;
+    }
+    setCardNumberError('');
+    return true;
+  };
+
   const handleUpdateAd = async () => {
     if (!editingAd) return;
+
+    if (!validateEditCardNumber()) {
+      return;
+    }
 
     setUpdating(true);
     try {
@@ -195,7 +268,12 @@ const Profile = () => {
       // Add fields based on ad type
       if (editingAd.isCardAd) {
         if (editFormData.card_type_id) formDataObj.append('card_type_id', editFormData.card_type_id);
-        if (editFormData.card_number) formDataObj.append('card_number', editFormData.card_number);
+        if (editFormData.card_number) {
+          formDataObj.append(
+            'card_number',
+            normalizeCardNumberForSubmit(editFormData.card_number, editingCardType?.name)
+          );
+        }
       } else {
         if (editFormData.item_type_id) formDataObj.append('item_type_id', editFormData.item_type_id);
       }
@@ -846,14 +924,28 @@ const Profile = () => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-card-number" className="text-white">Card Number</Label>
+                    <Label htmlFor="edit-card-number" className="text-white">
+                      {isEditVisaCard ? 'Card ID' : 'Card Number'}
+                    </Label>
                     <Input
                       id="edit-card-number"
                       name="card_number"
                       value={editFormData.card_number}
                       onChange={handleEditChange}
+                      inputMode="numeric"
+                      maxLength={isEditVisaCard ? 19 : isEditNationalCard ? 14 : 30}
+                      placeholder={
+                        isEditVisaCard
+                          ? 'XXXX-XXXX-XXXX-XXXX'
+                          : isEditNationalCard
+                            ? '14-digit national ID'
+                            : 'Enter card number'
+                      }
                       className="bg-white/10 border-white/20 text-white"
                     />
+                    {cardNumberError && (
+                      <p className="text-xs text-red-400">{cardNumberError}</p>
+                    )}
                   </div>
                 </>
               ) : (

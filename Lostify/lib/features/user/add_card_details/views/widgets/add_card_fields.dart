@@ -7,6 +7,7 @@ import 'package:lostify/core/utilies/colors/app_colors.dart';
 import 'package:lostify/core/utilies/sizes/sized_config.dart';
 import 'package:lostify/core/utilies/styles/app_text_styles.dart';
 import 'package:lostify/features/user/add_card_details/view_models/cubit/add_card_cubit.dart';
+import 'package:lostify/features/user/add_card_details/views/widgets/card_number_input.dart';
 import 'package:lostify/features/user/add_card_details/views/widgets/date_time_picker_section.dart';
 import 'package:lostify/features/user/add_card_details/views/widgets/pick_card_image.dart';
 import 'package:flutter/material.dart';
@@ -43,11 +44,9 @@ class AddCardFields extends StatelessWidget {
                 controller: cubit.titleController,
               ),
               SizedBox(height: SizeConfig.height * 0.008),
-              CustomTextFormFieldWithTitle(
-                hintText: "Enter card number",
-                title: "Ad Card Number *",
-                keyboardType: TextInputType.number,
+              CardNumberInput(
                 controller: cubit.cardNumberController,
+                cardType: cubit.selectedCardType,
               ),
               SizedBox(height: SizeConfig.height * 0.008),
               CustomTextFormFieldWithTitle(

@@ -6,6 +6,7 @@ import SearchBar from '@/components/SearchBar';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { apiUrl } from '@/lib/api';
+import { toast } from '@/components/ui/use-toast';
 
 interface AdItem {
   id: number;
@@ -28,6 +29,7 @@ const Search = () => {
 
   const [searchResults, setSearchResults] = useState<AdItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
 
   // Lifted filter/search states
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -96,11 +98,25 @@ const Search = () => {
       }
     }
 
-    if (
-      searchQuery.trim() !== '' &&
-      !item.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    ) return false;
+    if (searchQuery.trim() !== '') {
+      const queryLower = searchQuery.toLowerCase();
+      const queryDigits = searchQuery.replace(/\D/g, '');
+      const titleMatch = item.title.toLowerCase().includes(queryLower);
+      const descMatch = item.description.toLowerCase().includes(queryLower);
+
+      const isCardSearch =
+        filterType === 'visa' ||
+        filterType === 'national card' ||
+        queryDigits.length >= 4;
+
+      let cardMatch = false;
+      if (item.isCardAd && queryDigits && isCardSearch) {
+        const adDigits = (item.card_number || '').replace(/\D/g, '');
+        cardMatch = adDigits.includes(queryDigits);
+      }
+
+      if (!titleMatch && !descMatch && !cardMatch) return false;
+    }
 
     return true;
   });
@@ -120,9 +136,55 @@ const Search = () => {
     ).filter(Boolean)
   )).sort();
 
-  // Apply Filters handler (for possible future API calls or complex logic)
+  const handleImageSearch = async (file: File) => {
+    setImageSearchLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const accessToken = localStorage.getItem('accessToken');
+      const headers: HeadersInit = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const res = await fetch(apiUrl('search/by-image/'), {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.error || 'Image classification failed');
+      }
+
+      const data = await res.json();
+      const category = data.category as string;
+      if (!category) {
+        throw new Error('No category returned from image search');
+      }
+
+      setFilterType(category.toLowerCase());
+      setSearchQuery(category);
+      toast({
+        title: 'Image classified',
+        description: `Showing results for ${category}`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Image search failed';
+      toast({
+        title: 'Image search failed',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setImageSearchLoading(false);
+    }
+  };
+
   const applyFilters = () => {
-    // Currently filtering is reactive, so this can be left empty or trigger refetch
+    // Filtering is reactive via state
   };
 
   // Clear all filters & search
@@ -175,6 +237,8 @@ const Search = () => {
               condition={''}
               setCondition={() => {}}
               onSearch={applyFilters}
+              onImageSearch={handleImageSearch}
+              imageSearchLoading={imageSearchLoading}
             />
           </div>
 

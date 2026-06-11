@@ -10,6 +10,13 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from "@/components/ui/use-toast";
 import { apiUrl } from '@/lib/api';
+import {
+  formatVisaInput,
+  validateVisa,
+  validateNationalCard,
+  isNationalCardType,
+  normalizeCardNumberForSubmit,
+} from '@/lib/cardValidation';
 
 const PostAd = () => {
   const [searchParams] = useSearchParams();
@@ -36,13 +43,15 @@ const PostAd = () => {
   });
 
   const [loading, setLoading] = useState(false);
-  
+  const [cardNumberError, setCardNumberError] = useState('');
+
   const selectedCardType = cardTypes.find(
     (type) => type.id.toString() === formData.card_type_id
   );
   const isCardPost = postingKind === 'card';
   const isVisaCard =
     selectedCardType?.name?.toLowerCase() === 'visa';
+  const isNationalCard = isNationalCardType(selectedCardType?.name);
 
   useEffect(() => {
     const fetchTypes = async () => {
@@ -65,8 +74,29 @@ const PostAd = () => {
     fetchTypes();
   }, []);
 
+  const validateCardNumber = (): boolean => {
+    if (!isCardPost) return true;
+
+    if (isVisaCard) {
+      const error = validateVisa(formData.card_number);
+      setCardNumberError(error ?? '');
+      return !error;
+    }
+    if (isNationalCard) {
+      const error = validateNationalCard(formData.card_number);
+      setCardNumberError(error ?? '');
+      return !error;
+    }
+    setCardNumberError('');
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateCardNumber()) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -89,7 +119,10 @@ const PostAd = () => {
           if (key === 'card_type_id' && formData[key]) {
             formDataObj.append('card_type_id', formData[key]);
           } else if (key === 'card_number' && formData[key]) {
-            formDataObj.append('card_number', formData[key]);
+            formDataObj.append(
+              'card_number',
+              normalizeCardNumberForSubmit(formData[key], selectedCardType?.name)
+            );
           } else if (key === 'reward' && formData[key]) {
             formDataObj.append('reward', formData[key]);
           } else if (formData[key] && key !== 'card_type_id' && key !== 'card_number' && key !== 'reward') {
@@ -147,6 +180,7 @@ const PostAd = () => {
       
       // Reset form
       setPostingKind('item');
+      setCardNumberError('');
       setFormData({
         title: '',
         item_type_id: '',
@@ -181,6 +215,32 @@ const PostAd = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'card_type_id') {
+      setCardNumberError('');
+      setFormData((prevData) => ({
+        ...prevData,
+        card_type_id: value,
+        card_number: '',
+      }));
+      return;
+    }
+
+    if (name === 'card_number') {
+      let nextValue = value;
+      if (isVisaCard) {
+        nextValue = formatVisaInput(value);
+      } else if (isNationalCard) {
+        nextValue = value.replace(/\D/g, '').slice(0, 14);
+      }
+      setCardNumberError('');
+      setFormData((prevData) => ({
+        ...prevData,
+        card_number: nextValue,
+      }));
+      return;
+    }
+
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
@@ -330,16 +390,29 @@ const PostAd = () => {
                       <Input
                         id="card_number"
                         name="card_number"
-                        placeholder={isVisaCard ? 'Enter Visa card ID' : 'Enter card number'}
+                        placeholder={
+                          isVisaCard
+                            ? 'XXXX-XXXX-XXXX-XXXX'
+                            : isNationalCard
+                              ? '14-digit national ID'
+                              : 'Enter card number'
+                        }
                         value={formData.card_number}
                         onChange={handleChange}
                         required
+                        inputMode="numeric"
+                        maxLength={isVisaCard ? 19 : isNationalCard ? 14 : 30}
                         className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-cyan-400"
                       />
+                      {cardNumberError && (
+                        <p className="text-xs text-red-400">{cardNumberError}</p>
+                      )}
                       <p className="text-xs text-gray-300">
                         {isVisaCard
-                          ? 'Enter the card ID (last digits) to help identify the Visa card'
-                          : 'Enter the card number to help identify the card'}
+                          ? '16 digits starting with 4 (formatted as XXXX-XXXX-XXXX-XXXX)'
+                          : isNationalCard
+                            ? 'Exactly 14 digits'
+                            : 'Enter the card number to help identify the card'}
                       </p>
                     </div>
                   </>

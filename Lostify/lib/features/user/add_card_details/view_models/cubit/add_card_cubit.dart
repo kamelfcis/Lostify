@@ -5,6 +5,7 @@ import 'package:lostify/app/my_app.dart';
 import 'package:lostify/core/cache/cache_helper.dart';
 import 'package:lostify/core/constants/app_constants.dart';
 import 'package:lostify/core/di/dependancy_injection.dart';
+import 'package:lostify/core/helper/card_validation.dart';
 import 'package:lostify/core/helper/pick_image.dart';
 import 'package:lostify/core/network/api/api_consumer.dart';
 import 'package:lostify/core/network/api/end_points.dart';
@@ -106,14 +107,31 @@ class AddCardCubit extends Cubit<AddCardState> {
     }
   }
 
+  String? validateCardNumber() {
+    return CardValidation.validateForCardType(
+      cardNumberController.text,
+      selectedCardType.name,
+    );
+  }
+
   // Add Card
   Future<void> addCard() async {
     log(selectedImage.toString());
+    final cardError = validateCardNumber();
+    if (cardError != null) {
+      emit(AddCardError(cardError));
+      return;
+    }
+
     if (formKey.currentState!.validate() &&
         selectedImage != null &&
         locationController.text.isNotEmpty) {
       try {
         emit(AddCardLoading());
+        final normalizedCardNumber = CardValidation.normalizeForSubmit(
+          cardNumberController.text,
+          selectedCardType.name,
+        );
         log(selectedCardType.toJson().toString());
         log('Title: ${selectedImage.toString()}');
         await apiConsumer.post(
@@ -128,7 +146,7 @@ class AddCardCubit extends Cubit<AddCardState> {
             },
             "title": titleController.text,
             "card_type_id": selectedCardType.id,
-            "card_number": cardNumberController.text,
+            "card_number": normalizedCardNumber,
             "status": cacheHelper.getData(key: AppConstants.itemStatus),
             "location_description": locationController.text,
             "exact_address": "",
@@ -160,7 +178,9 @@ class AddCardCubit extends Cubit<AddCardState> {
   Future<void> close() {
     titleController.dispose();
     descriptionController.dispose();
+    cardNumberController.dispose();
     locationController.dispose();
+    priceController.dispose();
     return super.close();
   }
 }

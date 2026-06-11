@@ -21,6 +21,6 @@
     { "src": "/admin/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
     { "src": "/static/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "Lostify-Front-End/dist/$1" }
+    { "src": "/(.*)", "dest": "Lostify-Front-End/$1" }
   ]
 }

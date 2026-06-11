@@ -123,15 +123,25 @@ const PostAd = () => {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to post ad');
+        const fieldErrors = Object.entries(errorData)
+          .filter(([key]) => key !== 'detail')
+          .map(([key, value]) => {
+            const text = Array.isArray(value) ? value.join(', ') : String(value);
+            return `${key}: ${text}`;
+          })
+          .join('; ');
+        throw new Error(errorData.detail || fieldErrors || 'Failed to post ad');
       }
 
       const response = await res.json();
       
       // Show success toast
       toast({
-        title: "✅ Ad Posted Successfully!",
-        description: `Your ${adType === 'lost' ? 'lost' : 'found'} item ad has been posted successfully. You'll be notified when someone responds.`,
+        title: response.image_upload_warning
+          ? "Ad posted (image not saved)"
+          : "✅ Ad Posted Successfully!",
+        description: response.image_upload_warning
+          || `Your ${adType === 'lost' ? 'lost' : 'found'} item ad has been posted successfully. You'll be notified when someone responds.`,
         duration: 5000,
       });
       

@@ -94,6 +94,19 @@ class AdViewSet(viewsets.ModelViewSet):
     serializer_class = AdSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        data = dict(serializer.data)
+        if getattr(serializer, '_image_skipped', False):
+            data['image_upload_warning'] = (
+                'Your ad was posted, but the image could not be saved '
+                '(media storage is not configured on this server).'
+            )
+        headers = self.get_success_headers(serializer.data)
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -130,6 +143,19 @@ class CardAdViewSet(viewsets.ModelViewSet):
     queryset = CardAd.objects.all().select_related('card_type', 'user')
     serializer_class = CardAdSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        data = dict(serializer.data)
+        if getattr(serializer, '_image_skipped', False):
+            data['image_upload_warning'] = (
+                'Your ad was posted, but the image could not be saved '
+                '(media storage is not configured on this server).'
+            )
+        headers = self.get_success_headers(serializer.data)
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -77,7 +78,45 @@ class CardTypeSerializer(serializers.ModelSerializer):
         model = CardType
         fields = ['id', 'name']
 
-class AdSerializer(serializers.ModelSerializer):
+
+class ImageUploadSerializerMixin:
+    """Avoid 500s when media storage is unavailable (e.g. Vercel without Cloudinary)."""
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs.get('image') and not getattr(settings, 'CLOUDINARY_URL', ''):
+            attrs.pop('image')
+            self._image_skipped = True
+        return attrs
+
+    def create(self, validated_data):
+        try:
+            return super().create(validated_data)
+        except OSError as exc:
+            if 'image' in validated_data:
+                raise serializers.ValidationError({
+                    'image': (
+                        'Image upload failed. Post your ad without an image '
+                        'or try again later.'
+                    ),
+                }) from exc
+            raise
+
+    def update(self, instance, validated_data):
+        try:
+            return super().update(instance, validated_data)
+        except OSError as exc:
+            if 'image' in validated_data:
+                raise serializers.ValidationError({
+                    'image': (
+                        'Image upload failed. Save without an image '
+                        'or try again later.'
+                    ),
+                }) from exc
+            raise
+
+
+class AdSerializer(ImageUploadSerializerMixin, serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     item_type = ItemTypeSerializer(read_only=True)
     item_type_id = serializers.PrimaryKeyRelatedField(
@@ -121,7 +160,7 @@ class UserRatingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You can only rate resolved ads.")
         return data
 
-class CardAdSerializer(serializers.ModelSerializer):
+class CardAdSerializer(ImageUploadSerializerMixin, serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     card_type = CardTypeSerializer(read_only=True)
     card_type_id = serializers.PrimaryKeyRelatedField(

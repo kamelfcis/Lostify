@@ -32,7 +32,7 @@ class ItemTypesGridView extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: SizeConfig.width * 0.03,
               mainAxisSpacing: SizeConfig.height * 0.02,
-              childAspectRatio: SizeConfig.width / (SizeConfig.height * 0.25),
+              childAspectRatio: (SizeConfig.width / (SizeConfig.height * 0.25)).clamp(0.3, 3.0),
             ),
             padding: EdgeInsets.symmetric(
               vertical: SizeConfig.height * 0.01,

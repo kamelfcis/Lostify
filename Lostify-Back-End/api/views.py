@@ -1,9 +1,13 @@
+import re
+
+from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from .models import ItemType, Ad, ChatMessage, AdInteractionHistory, UserRating, CardType, CardAd
+from .gemini_service import classify_image
 from .serializers import *
 
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -139,10 +143,54 @@ class CardTypeViewSet(viewsets.ModelViewSet):
     serializer_class = CardTypeSerializer
     permission_classes = [permissions.AllowAny]
 
+class ImageSearchView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        if not settings.GEMINI_API_KEY:
+            return Response(
+                {'error': 'Image search is not configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        image = request.FILES.get('image')
+        if not image:
+            return Response(
+                {'error': 'No image provided.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            category = classify_image(
+                image.read(),
+                mime_type=image.content_type or 'image/jpeg',
+            )
+        except (ValueError, RuntimeError) as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response(
+                {'error': 'Image classification failed.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({'category': category})
+
+
 class CardAdViewSet(viewsets.ModelViewSet):
     queryset = CardAd.objects.all().select_related('card_type', 'user')
     serializer_class = CardAdSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        card_number = self.request.query_params.get('card_number')
+        card_type = self.request.query_params.get('card_type')
+        if card_number:
+            digits = re.sub(r'\D', '', card_number)
+            qs = qs.filter(card_number__icontains=digits or card_number)
+        if card_type:
+            qs = qs.filter(card_type__name__iexact=card_type)
+        return qs
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

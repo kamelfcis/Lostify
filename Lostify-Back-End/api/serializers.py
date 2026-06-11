@@ -3,7 +3,10 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 from .models import ItemType, Ad, ChatMessage, AdInteractionHistory, UserRating, CardType, CardAd
+from .validators import validate_card_number
 
 
 
@@ -174,3 +177,22 @@ class CardAdSerializer(ImageUploadSerializerMixin, serializers.ModelSerializer):
             'location_description', 'exact_address', 'transportation_type',
             'date_time', 'comments', 'image', 'reward', 'is_resolved', 'created_at'
         ]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        card_type = attrs.get('card_type')
+        if card_type is None and self.instance is not None:
+            card_type = self.instance.card_type
+
+        card_number = attrs.get('card_number')
+        if card_number is None and self.instance is not None:
+            card_number = self.instance.card_number
+
+        if card_type is not None and card_number is not None:
+            try:
+                attrs['card_number'] = validate_card_number(card_type.name, card_number)
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({'card_number': exc.messages}) from exc
+
+        return attrs

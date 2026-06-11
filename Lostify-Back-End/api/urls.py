@@ -26,4 +26,7 @@ urlpatterns = [
     
     # Profile update
     path('users/<int:pk>/update/', UpdateProfileView.as_view(), name='update_profile'),
+
+    # Image search
+    path('search/by-image/', ImageSearchView.as_view(), name='search_by_image'),
 ]

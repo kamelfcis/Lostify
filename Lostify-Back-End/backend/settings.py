@@ -40,6 +40,7 @@ TURSO_DATABASE_URL = os.environ.get('TURSO_DATABASE_URL') or config(
 TURSO_AUTH_TOKEN = os.environ.get('TURSO_AUTH_TOKEN') or config(
     'TURSO_AUTH_TOKEN', default=''
 )
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
 
 # Application definition

@@ -16,6 +16,7 @@ const PostAd = () => {
   const navigate = useNavigate();
   const initialAdType = searchParams.get('type') || 'lost';
   const [adType, setAdType] = useState(initialAdType);
+  const [postingKind, setPostingKind] = useState<'item' | 'card'>('item');
 
   const [itemTypes, setItemTypes] = useState<any[]>([]);
   const [cardTypes, setCardTypes] = useState<any[]>([]);
@@ -36,41 +37,33 @@ const PostAd = () => {
 
   const [loading, setLoading] = useState(false);
   
-  // Check if selected item type is "Card"
-  const selectedItemType = itemTypes.find(type => type.id.toString() === formData.item_type_id);
-  const isCardType = selectedItemType?.name?.toLowerCase() === 'cards';
+  const selectedCardType = cardTypes.find(
+    (type) => type.id.toString() === formData.card_type_id
+  );
+  const isCardPost = postingKind === 'card';
+  const isVisaCard =
+    selectedCardType?.name?.toLowerCase() === 'visa';
 
   useEffect(() => {
-    // Fetch item types from API
-    const fetchItemTypes = async () => {
+    const fetchTypes = async () => {
       try {
-        const response = await fetch(apiUrl('item-types'));
-        const data = await response.json();
-        setItemTypes(data);
+        const [itemTypesRes, cardTypesRes] = await Promise.all([
+          fetch(apiUrl('item-types')),
+          fetch(apiUrl('card-types')),
+        ]);
+        const [itemTypesData, cardTypesData] = await Promise.all([
+          itemTypesRes.json(),
+          cardTypesRes.json(),
+        ]);
+        setItemTypes(itemTypesData);
+        setCardTypes(cardTypesData);
       } catch (error) {
-        console.error('Error fetching item types:', error);
+        console.error('Error fetching types:', error);
       }
     };
 
-    fetchItemTypes();
+    fetchTypes();
   }, []);
-
-  useEffect(() => {
-    // Fetch card types from API when needed
-    const fetchCardTypes = async () => {
-      try {
-        const response = await fetch(apiUrl('card-types'));
-        const data = await response.json();
-        setCardTypes(data);
-      } catch (error) {
-        console.error('Error fetching card types:', error);
-      }
-    };
-
-    if (isCardType) {
-      fetchCardTypes();
-    }
-  }, [isCardType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +73,7 @@ const PostAd = () => {
       const formDataObj = new FormData();
       
       // Determine which endpoint to use
-      const isCard = isCardType;
+      const isCard = isCardPost;
       const endpoint = isCard ? apiUrl('card-ads/') : apiUrl('ads/');
       
       // Add all the form fields to FormData
@@ -143,6 +136,7 @@ const PostAd = () => {
       });
       
       // Reset form
+      setPostingKind('item');
       setFormData({
         title: '',
         item_type_id: '',
@@ -249,24 +243,56 @@ const PostAd = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white">Item Type</Label>
-                  <select
-                    name="item_type_id"
-                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white focus:border-cyan-400 focus:outline-none"
-                    value={formData.item_type_id}
-                    onChange={handleChange}
-                    required
+                  <Label className="text-white">What are you posting?</Label>
+                  <RadioGroup
+                    value={postingKind}
+                    onValueChange={(value) => {
+                      setPostingKind(value as 'item' | 'card');
+                      setFormData((prev) => ({
+                        ...prev,
+                        item_type_id: '',
+                        card_type_id: '',
+                        card_number: '',
+                      }));
+                    }}
+                    className="grid grid-cols-2 gap-4"
                   >
-                    <option value="" className="bg-slate-900">Select Item Type</option>
-                    {itemTypes.map((type) => (
-                      <option key={type.id} value={type.id} className="bg-slate-900">
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
+                    <div className="flex items-center space-x-2 rounded-md border border-white/20 p-3">
+                      <RadioGroupItem value="item" id="posting-item" />
+                      <Label htmlFor="posting-item" className="text-white cursor-pointer">
+                        Physical item
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 rounded-md border border-white/20 p-3">
+                      <RadioGroupItem value="card" id="posting-card" />
+                      <Label htmlFor="posting-card" className="text-white cursor-pointer">
+                        Card (Visa, ID, etc.)
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
 
-                {isCardType && (
+                {!isCardPost && (
+                  <div className="space-y-2">
+                    <Label className="text-white">Item Type</Label>
+                    <select
+                      name="item_type_id"
+                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white focus:border-cyan-400 focus:outline-none"
+                      value={formData.item_type_id}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="" className="bg-slate-900">Select Item Type</option>
+                      {itemTypes.map((type) => (
+                        <option key={type.id} value={type.id} className="bg-slate-900">
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {isCardPost && (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="card_type_id" className="text-white">Card Type</Label>
@@ -288,17 +314,23 @@ const PostAd = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="card_number" className="text-white">Card Number</Label>
+                      <Label htmlFor="card_number" className="text-white">
+                        {isVisaCard ? 'Card ID' : 'Card Number'}
+                      </Label>
                       <Input
                         id="card_number"
                         name="card_number"
-                        placeholder="Enter card number"
+                        placeholder={isVisaCard ? 'Enter Visa card ID' : 'Enter card number'}
                         value={formData.card_number}
                         onChange={handleChange}
                         required
                         className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-cyan-400"
                       />
-                      <p className="text-xs text-gray-300">Enter the card number to help identify the card</p>
+                      <p className="text-xs text-gray-300">
+                        {isVisaCard
+                          ? 'Enter the card ID (last digits) to help identify the Visa card'
+                          : 'Enter the card number to help identify the card'}
+                      </p>
                     </div>
                   </>
                 )}

@@ -335,7 +335,7 @@ Local development still uses `db.sqlite3` and the `media/` folder when `TURSO_*`
    python manage.py migrate
    python manage.py createsuperuser
    ```
-5. Optionally seed `ItemType` / `CardType` rows via Django admin or fixtures.
+5. Item types and card types are seeded automatically by migration `0008_seed_item_types` (Electronics, Wallets, Keys, Documents, Jewelry, Bags, Pets, Others; plus Visa, National Card, Other). Re-run `python manage.py migrate` after pulling updates.
 
 ### 2. Cloudinary setup (manual — one time)
 

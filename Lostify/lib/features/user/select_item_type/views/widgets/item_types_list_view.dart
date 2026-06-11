@@ -25,6 +25,8 @@ class ItemTypesGridView extends StatelessWidget {
             return CustomFailureMesage(errorMessage: state.message);
           }
           var itemTypes = context.read<ItemTypesCubit>().itemTypes;
+          final showCardsTile = !itemTypes.any((type) => type.name == 'Cards');
+          final itemCount = itemTypes.length + (showCardsTile ? 1 : 0);
           return GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
@@ -36,22 +38,34 @@ class ItemTypesGridView extends StatelessWidget {
               vertical: SizeConfig.height * 0.01,
               horizontal: SizeConfig.width * 0.02,
             ),
-            itemCount: itemTypes.length,
-            itemBuilder: (context, index) => ItemTypeCard(
+            itemCount: itemCount,
+            itemBuilder: (context, index) {
+              if (showCardsTile && index == itemTypes.length) {
+                return ItemTypeCard(
+                  onTap: () {
+                    context.pushScreen(RouteNames.cardTypeScreen);
+                  },
+                  key: const Key('cards'),
+                  name: 'Cards',
+                );
+              }
+
+              final itemType = itemTypes[index];
+              return ItemTypeCard(
                 onTap: () {
-                  if (itemTypes[index].name == "Cards") {
-                    context.pushScreen(
-                      RouteNames.cardTypeScreen,
-                    );
+                  if (itemType.name == 'Cards') {
+                    context.pushScreen(RouteNames.cardTypeScreen);
                   } else {
                     context.pushScreen(
                       RouteNames.addPostDetailsScreen,
-                      arguments: itemTypes[index].toJson(),
+                      arguments: itemType.toJson(),
                     );
                   }
                 },
-                key: Key(itemTypes[index].id.toString()),
-                name: itemTypes[index].name),
+                key: Key(itemType.id.toString()),
+                name: itemType.name,
+              );
+            },
           );
         },
       ),

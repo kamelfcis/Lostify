@@ -21,6 +21,8 @@
     { "src": "/admin/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
     { "src": "/static/(.*)", "dest": "Lostify-Back-End/serverless/index.py" },
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/assets/(.*)", "dest": "Lostify-Front-End/assets/$1" },
+    { "src": "/(robots\\.txt|placeholder\\.svg|favicon\\.ico|lostifylogo\\.png)", "dest": "Lostify-Front-End/$1" },
+    { "src": "/(.*)", "dest": "Lostify-Front-End/index.html" }
   ]
 }

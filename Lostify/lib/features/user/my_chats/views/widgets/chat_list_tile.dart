@@ -62,7 +62,7 @@ class ChatListTile extends StatelessWidget {
             style: AppTextStyles.title18WhiteW500,
           ),
           subtitle: Text(
-            chat.messages == null
+            (chat.messages == null || chat.messages!.isEmpty)
                 ? "No messages yet"
                 : chat.messages!.first.message,
             maxLines: 1,

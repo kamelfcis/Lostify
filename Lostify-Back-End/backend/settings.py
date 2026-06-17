@@ -31,7 +31,11 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,lostify-ruddy.vercel.app,.vercel.app',
+    cast=Csv(),
+)
 
 CLOUDINARY_URL = config('CLOUDINARY_URL', default='')
 TURSO_DATABASE_URL = os.environ.get('TURSO_DATABASE_URL') or config(
@@ -100,14 +104,37 @@ AUTH_USER_MODEL = 'api.User'
 
 
 JAZZMIN_SETTINGS = {
-    "site_title": "FinLost",
-    "site_header": "FinLost",  # Title on the admin panel header
-    "site_brand": "FinLost",  # Brand name displayed on the navbar
-    "site_logo": "images/logo.png",  # Path inside the static folder
-    "site_logo_classes": "img-fluid",  # Optional: Ensures responsiveness
-    "site_icon": "images/logo.png",  # Favicon for the admin panel
-    "welcome_sign": "Welcome to FinLost Admin Board",  # Text shown on login screen
-    "copyright": "© 2025 Egy Devs",
+    "site_title": "Lostify Admin",
+    "site_header": "Lostify",
+    "site_brand": "Lostify",
+    "site_logo": "images/logo.png",
+    "site_logo_classes": "img-fluid",
+    "site_icon": "images/logo.png",
+    "welcome_sign": "Welcome to Lostify Admin Panel",
+    "copyright": "© 2025 Lostify",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": [],
+    "custom_links": {},
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+    "related_modal_active": False,
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+        "auth.group": "vertical_tabs",
+    },
 }
 
 from datetime import timedelta
@@ -131,7 +158,7 @@ SIMPLE_JWT = {
 
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='http://localhost:5173,http://127.0.0.1:5173',
+    default='http://localhost:5173,http://127.0.0.1:5173,https://lostify-ruddy.vercel.app,https://*.vercel.app',
     cast=Csv(),
 )
 CORS_ALLOWED_ORIGINS = config(

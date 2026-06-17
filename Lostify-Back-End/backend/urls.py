@@ -14,38 +14,15 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-import json
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-
-_INIT_SECRET = "lostify-init-7f3a9b2e"
-
-@csrf_exempt
-@require_POST
-def _create_admin(request):
-    try:
-        body = json.loads(request.body or b'{}')
-    except Exception:
-        body = {}
-    if body.get('secret') != _INIT_SECRET:
-        return JsonResponse({'error': 'forbidden'}, status=403)
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    if User.objects.filter(username='admin').exists():
-        return JsonResponse({'status': 'already_exists'})
-    User.objects.create_superuser('admin', 'admin@lostify.com', 'Admin@1234')
-    return JsonResponse({'status': 'created'})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api-auth/', include('rest_framework.urls')),
-    path('api/_init_admin/', _create_admin),
 ]
 
 # Local dev only: WhiteNoise serves static in production; Cloudinary serves media URLs.

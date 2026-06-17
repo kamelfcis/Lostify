@@ -156,11 +156,13 @@ SIMPLE_JWT = {
     "TOKEN_USER_CLASS": "api.models.User",  # Update with your user model
 }
 
-CSRF_TRUSTED_ORIGINS = config(
+CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    default='http://localhost:5173,http://127.0.0.1:5173,https://lostify-ruddy.vercel.app,https://*.vercel.app',
-    cast=Csv(),
-)
+    'https://lostify-ruddy.vercel.app,https://*.vercel.app',
+).split(',')
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:5173,http://127.0.0.1:5173',
@@ -236,9 +238,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = config('STATIC_URL', default='/static/')
-STATICFILES_DIRS = [
-    BASE_DIR / "static",  # For global static files
-]
+_static_dir = BASE_DIR / "static"
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"  # For collected static files
 
 MEDIA_URL = config('MEDIA_URL', default='/media/')

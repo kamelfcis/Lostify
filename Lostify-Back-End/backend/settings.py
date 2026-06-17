@@ -85,10 +85,9 @@ if CLOUDINARY_URL:
     ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -156,13 +155,17 @@ SIMPLE_JWT = {
     "TOKEN_USER_CLASS": "api.models.User",  # Update with your user model
 }
 
-CSRF_TRUSTED_ORIGINS = os.environ.get(
-    'CSRF_TRUSTED_ORIGINS',
-    'https://lostify-ruddy.vercel.app,https://*.vercel.app',
-).split(',')
+CSRF_TRUSTED_ORIGINS = [
+    'https://lostify-ruddy.vercel.app',
+    'https://*.vercel.app',
+]
 
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+# Do NOT set CSRF_COOKIE_SECURE or SESSION_COOKIE_SECURE here.
+# Vercel's proxy terminates TLS externally, so request.is_secure() can be
+# unreliable in the Lambda. With SECURE_PROXY_SSL_HEADER set below, HTTPS is
+# trusted via X-Forwarded-Proto, but keeping the Secure cookie flags off
+# prevents the browser from silently dropping CSRF/session cookies when
+# Django's WSGI layer sees the connection as plain HTTP.
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:5173,http://127.0.0.1:5173',
@@ -189,6 +192,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
+
+# Trust Vercel's TLS-terminating proxy so request.is_secure() returns True.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
@@ -238,9 +243,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = config('STATIC_URL', default='/static/')
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# Only add 'static/' as an extra source dir when it actually exists locally.
+# In the Vercel Lambda the directory is absent, so skip it to avoid errors.
 _static_dir = BASE_DIR / "static"
 STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
-STATIC_ROOT = BASE_DIR / "staticfiles"  # For collected static files
 
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 

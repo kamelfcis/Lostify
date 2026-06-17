@@ -1,4 +1,4 @@
-# Lostify (Fien Lost)
+# Lostify
 
 A full-stack **lost & found platform** that helps users report, search, and recover lost items and identification cards. Users can post ads with photos and location details, browse listings, chat in real time, and manage their profile across web and mobile.
 

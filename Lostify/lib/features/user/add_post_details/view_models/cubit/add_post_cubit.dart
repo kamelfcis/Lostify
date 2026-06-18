@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:bloc/bloc.dart';
+import 'package:dio/dio.dart';
 import 'package:lostify/app/my_app.dart';
 import 'package:lostify/core/cache/cache_helper.dart';
 import 'package:lostify/core/constants/app_constants.dart';
@@ -126,7 +127,10 @@ class AddPostCubit extends Cubit<AddPostState> {
                 _selectedTime.minute,
               ).toIso8601String(),
               "comments": descriptionController.text,
-              "image": selectedImage,
+              "image": await MultipartFile.fromFile(
+                selectedImage!.path,
+                filename: selectedImage!.path.split('/').last,
+              ),
               "reward": isPaidPost ? priceController.text : 0.0,
               "is_resolved": false,
             },

@@ -16,6 +16,16 @@ import Listing from "./pages/Listing";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// Admin
+import AdminGuard from "./pages/admin/AdminGuard";
+import AdminLayout from "./pages/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import Users from "./pages/admin/Users";
+import Ads from "./pages/admin/Ads";
+import CardAds from "./pages/admin/CardAds";
+import ItemTypes from "./pages/admin/ItemTypes";
+import CardTypes from "./pages/admin/CardTypes";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -35,6 +45,24 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/listing/:id" element={<Listing />} />
+
+          {/* Admin routes — protected by AdminGuard */}
+          <Route
+            path="/admin"
+            element={
+              <AdminGuard>
+                <AdminLayout />
+              </AdminGuard>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="ads" element={<Ads />} />
+            <Route path="card-ads" element={<CardAds />} />
+            <Route path="item-types" element={<ItemTypes />} />
+            <Route path="card-types" element={<CardTypes />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

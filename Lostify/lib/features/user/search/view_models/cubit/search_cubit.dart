@@ -10,6 +10,7 @@ import 'package:lostify/core/helper/date_timr_helper.dart';
 import 'package:lostify/core/helper/filter_helper.dart';
 import 'package:lostify/core/helper/location_helper.dart';
 import 'package:lostify/core/network/api/api_consumer.dart';
+import 'package:lostify/core/network/api/end_points.dart';
 import 'package:lostify/features/user/items/models/item_model.dart';
 import 'package:flutter/material.dart';
 part 'search_state.dart';
@@ -22,6 +23,9 @@ class SearchCubit extends Cubit<SearchState> {
   List<ItemModel> filteredItems = [];
   List<ItemModel> searchedItems = [];
   String classificationResult = '';
+  bool hasSearched = false;
+  bool itemsLoaded = false;
+  File? selectedSearchImage;
   String? itemStatus;
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
@@ -37,18 +41,94 @@ class SearchCubit extends Cubit<SearchState> {
         navigatorKey.currentContext!,
       );
 
-  /// Load all found items from API
+  /// Reset search UI to privacy-first empty state (no ads shown).
+  void prepareNewSession() {
+    hasSearched = false;
+    itemsLoaded = false;
+    allItems = [];
+    filteredItems = [];
+    searchedItems = [];
+    classificationResult = '';
+    selectedSearchImage = null;
+    itemStatus = null;
+    selectedCategory = null;
+    selectedLocation = null;
+    selectedDate = null;
+    selectedTime = null;
+    filterByDate = null;
+    filterByTime = null;
+    emit(SearchInitial());
+  }
+
+  /// Cache items without displaying them (legacy navigation args).
   Future<void> loadFoundItems({required List<ItemModel> items}) async {
     try {
-      emit(GetItemsLoading());
       allItems = items;
-      filteredItems = List.from(allItems);
-      searchedItems = List.from(allItems);
-      emit(GetItemsSuccess());
+      itemsLoaded = true;
+      filteredItems = [];
+      searchedItems = [];
+      emit(SearchInitial());
     } catch (e) {
       log('LoadFoundItems error: $e');
       emit(GetItemsFailure(message: e.toString()));
     }
+  }
+
+  /// Fetch ads from API only when the user actively searches.
+  Future<bool> ensureItemsLoaded({bool suppressLoadingEmit = false}) async {
+    if (itemsLoaded && allItems.isNotEmpty) return true;
+
+    if (!suppressLoadingEmit) {
+      emit(GetItemsLoading());
+    }
+    try {
+      final results = await Future.wait([
+        apiConsumer.get(EndPoints.getFoundItems),
+        apiConsumer.get(EndPoints.cardAds),
+      ]);
+
+      final loadedItems = <ItemModel>[];
+      if (results[0] is List) {
+        loadedItems.addAll(
+          (results[0] as List).map((item) => ItemModel.fromJson(item)),
+        );
+      }
+      if (results[1] is List) {
+        loadedItems.addAll(
+          (results[1] as List).map((item) => ItemModel.fromJson(item)),
+        );
+      }
+      loadedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      allItems = loadedItems;
+      itemsLoaded = true;
+      filteredItems = [];
+      searchedItems = [];
+      if (!suppressLoadingEmit) {
+        emit(hasSearched ? GetItemsSuccess() : SearchInitial());
+      }
+      return true;
+    } catch (e) {
+      log('ensureItemsLoaded error: $e');
+      emit(GetItemsFailure(message: e.toString()));
+      return false;
+    }
+  }
+
+  /// Submit a text search query (title, description, card number).
+  Future<void> submitTextSearch(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      prepareNewSession();
+      return;
+    }
+
+    final loaded = await ensureItemsLoaded();
+    if (!loaded) return;
+
+    hasSearched = true;
+    filteredItems = List.from(allItems);
+    searchItemsByText(trimmed);
   }
 
   /// Select category index by category value
@@ -60,8 +140,8 @@ class SearchCubit extends Cubit<SearchState> {
   /// Search items by text query (title, description, and card number for card ads)
   void searchItemsByText(String query) {
     if (query.trim().isEmpty) {
-      searchedItems = List.from(filteredItems);
-      emit(GetItemsSuccess());
+      searchedItems = hasSearched ? List.from(filteredItems) : [];
+      emit(hasSearched ? GetItemsSuccess() : SearchInitial());
       return;
     }
 
@@ -95,6 +175,11 @@ class SearchCubit extends Cubit<SearchState> {
   Future<void> searchByImage({required File selectedImage}) async {
     try {
       emit(GetItemsByImageLoading());
+      selectedSearchImage = selectedImage;
+      final loaded = await ensureItemsLoaded(suppressLoadingEmit: true);
+      if (!loaded) return;
+
+      hasSearched = true;
       final token = getIt<CacheHelper>().getUserModel()?.token?.access;
       classificationResult = await classifyImageViaApi(
         apiConsumer: apiConsumer,
@@ -217,10 +302,14 @@ class SearchCubit extends Cubit<SearchState> {
     filterByDate = null;
     filterByTime = null;
 
-    // Reset the lists to all items
-    filteredItems = List.from(allItems);
-    searchedItems = List.from(allItems);
-
-    emit(GetItemsSuccess());
+    if (hasSearched) {
+      filteredItems = List.from(allItems);
+      searchedItems = List.from(allItems);
+      emit(GetItemsSuccess());
+    } else {
+      filteredItems = [];
+      searchedItems = [];
+      emit(SearchInitial());
+    }
   }
 }

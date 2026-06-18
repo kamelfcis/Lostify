@@ -53,6 +53,7 @@ class _HomeTabBodyState extends State<HomeTabBody> {
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
+          _buildHomeHeader(context),
           _buildHeroSlider(context),
           const SizedBox(height: 16),
           AnimatedSmoothIndicator(
@@ -260,9 +261,63 @@ class _HomeTabBodyState extends State<HomeTabBody> {
             ),
             onTap: () => _navigateToPostAd(context),
           ),
+          const SizedBox(height: 14),
+          _GradientButton(
+            label: 'Search Items',
+            icon: Icons.manage_search_rounded,
+            gradient: LinearGradient(
+              colors: [
+                AppColors.kPrimaryColor,
+                AppColors.kPrimaryColor.withValues(alpha: 0.75),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            onTap: () => _navigateToSearch(context),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildHomeHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Lostify',
+              style: TextStyle(
+                color: AppColors.kPrimaryColor,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Material(
+            color: AppColors.kPrimaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              onTap: () => _navigateToSearch(context),
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  Icons.search_rounded,
+                  color: AppColors.kPrimaryColor,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToSearch(BuildContext context) {
+    context.pushScreen(RouteNames.searchScreen);
   }
 
   void _navigateToPostAd(BuildContext context) {

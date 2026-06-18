@@ -3,6 +3,7 @@ import 'package:lostify/features/user/items/cubit/get_found_items_cubit.dart';
 import 'package:lostify/features/user/search/models/filter_model.dart';
 import 'package:lostify/features/user/search/view_models/cubit/search_cubit.dart';
 import 'package:lostify/features/user/search/views/widgets/search_screen_body.dart';
+import 'package:lostify/features/user/upload_image/views/widgets/custom_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -24,6 +25,7 @@ class _SearchScreenState extends State<SearchScreen> {
     super.initState();
     searchCubit = getIt<SearchCubit>();
     itemsCubit = getIt<GetFoundItemsCubit>();
+    searchCubit.prepareNewSession();
   }
 
   @override
@@ -33,7 +35,10 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_initialized) return;
 
     args = ModalRoute.of(context)?.settings.arguments as FilterModel?;
-    searchCubit.loadFoundItems(items:args?.items ?? itemsCubit.items);
+    final preloadedItems = args?.items ?? itemsCubit.items;
+    if (preloadedItems.isNotEmpty) {
+      searchCubit.loadFoundItems(items: preloadedItems);
+    }
     if (args?.image != null) {
       searchCubit.searchByImage(selectedImage: args!.image!);
     }
@@ -45,7 +50,9 @@ class _SearchScreenState extends State<SearchScreen> {
     return BlocProvider.value(
       value: searchCubit,
       child: Scaffold(
-        body: SearchScreenBody(image: args?.image),
+        backgroundColor: Colors.white,
+        appBar: const CustomAppBar(title: 'Search'),
+        body: SearchScreenBody(initialImage: args?.image),
       ),
     );
   }

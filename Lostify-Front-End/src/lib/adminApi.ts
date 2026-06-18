@@ -20,7 +20,7 @@ export function decodeJwt(token: string): Record<string, unknown> {
   }
 }
 
-const ADMIN_USERNAMES = ['admin', 'mokamel'];
+const ADMIN_USERNAMES = ['admin'];
 
 export function isAdminUser(): boolean {
   const token = getToken();

@@ -2,6 +2,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:lostify/core/app_route/route_names.dart';
 import 'package:lostify/core/cache/cache_helper.dart';
+import 'package:lostify/core/di/dependancy_injection.dart';
 import 'package:lostify/core/utilies/assets/images/app_images.dart';
 import 'package:lostify/core/utilies/colors/app_colors.dart';
 import 'package:lostify/core/utilies/extensions/app_extensions.dart';
@@ -265,8 +266,8 @@ class _HomeTabBodyState extends State<HomeTabBody> {
   }
 
   void _navigateToPostAd(BuildContext context) {
-    final userJson = CacheHelper.sharedPreferences.getString('user');
-    if (userJson == null) {
+    final isLoggedIn = getIt<CacheHelper>().getUserModel() != null;
+    if (!isLoggedIn) {
       context.pushScreen(RouteNames.signInScreen);
       return;
     }

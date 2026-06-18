@@ -62,7 +62,8 @@ class CacheHelper {
   //! Get UserModel from local storage
   UserModel? getUserModel() {
     String? userJson = sharedPreferences.getString('user');
-    Map<String, dynamic> userMap = jsonDecode(userJson!);
+    if (userJson == null) return null;
+    Map<String, dynamic> userMap = jsonDecode(userJson);
     return UserModel.fromJson(userMap);
   }
 

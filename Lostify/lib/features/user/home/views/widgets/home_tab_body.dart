@@ -1,11 +1,11 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:lostify/core/app_route/route_names.dart';
+import 'package:lostify/core/cache/cache_helper.dart';
 import 'package:lostify/core/utilies/assets/images/app_images.dart';
 import 'package:lostify/core/utilies/colors/app_colors.dart';
 import 'package:lostify/core/utilies/extensions/app_extensions.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomeTabBody extends StatefulWidget {
   const HomeTabBody({super.key});
@@ -265,8 +265,8 @@ class _HomeTabBodyState extends State<HomeTabBody> {
   }
 
   void _navigateToPostAd(BuildContext context) {
-    final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
-    if (!isLoggedIn) {
+    final userJson = CacheHelper.sharedPreferences.getString('user');
+    if (userJson == null) {
       context.pushScreen(RouteNames.signInScreen);
       return;
     }

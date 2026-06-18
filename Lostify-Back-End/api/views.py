@@ -4,7 +4,8 @@ from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from .models import ItemType, Ad, ChatMessage, AdInteractionHistory, UserRating, CardType, CardAd
 from .gemini_service import classify_image
@@ -83,10 +84,20 @@ class UpdateProfileView(APIView):
 
 User = get_user_model()
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [IsAdminUser()]
+        return [permissions.AllowAny()]
+
+    def destroy(self, request, *args, **kwargs):
+        target_user = self.get_object()
+        if target_user == request.user:
+            raise PermissionDenied("You cannot delete your own account.")
+        return super().destroy(request, *args, **kwargs)
 
 class ItemTypeViewSet(viewsets.ModelViewSet):
     queryset = ItemType.objects.all()

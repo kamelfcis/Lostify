@@ -51,16 +51,23 @@ class LoginSerializer(serializers.Serializer):
         if user is None:
             raise serializers.ValidationError("Invalid credentials")
 
-        tokens = RefreshToken.for_user(user)
+        refresh = RefreshToken.for_user(user)
+        # Embed custom claims in the access token so the frontend can read is_superuser
+        access = refresh.access_token
+        access['is_superuser'] = user.is_superuser
+        access['is_staff'] = user.is_staff
+        access['username'] = user.username
+        access['user_id'] = user.id
         return {
             "user": {
                 "id": user.id,
                 "username": user.username,
-                # "role": user.role
+                "is_superuser": user.is_superuser,
+                "is_staff": user.is_staff,
             },
             "tokens": {
-                "refresh": str(tokens),
-                "access": str(tokens.access_token),
+                "refresh": str(refresh),
+                "access": str(access),
             },
         }
     

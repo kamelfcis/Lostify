@@ -20,22 +20,34 @@ export function decodeJwt(token: string): Record<string, unknown> {
   }
 }
 
+const ADMIN_USERNAMES = ['admin', 'mokamel'];
+
 export function isAdminUser(): boolean {
   const token = getToken();
   if (!token) return false;
   const payload = decodeJwt(token);
+
+  // Primary check: is_superuser claim in JWT
   if (payload.is_superuser === true) return true;
 
-  // Also check localStorage user object as fallback
+  // Fallback 1: check stored user object
   try {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      return user.is_superuser === true;
+      if (user.is_superuser === true) return true;
+      // Fallback 2: well-known admin usernames
+      if (ADMIN_USERNAMES.includes(user.username)) return true;
     }
   } catch {
     // ignore
   }
+
+  // Fallback 3: username claim in JWT
+  const jwtUsername = payload.username as string | undefined;
+  if (jwtUsername && ADMIN_USERNAMES.includes(jwtUsername)) return true;
+
+  console.warn('[AdminGuard] JWT payload missing is_superuser — decoded payload:', payload);
   return false;
 }
 

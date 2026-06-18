@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import { toast } from 'react-toastify';
 import { Eye, EyeOff } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
+import { isAdminUser } from '@/lib/adminApi';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -51,8 +52,12 @@ const Login = () => {
       localStorage.setItem('refreshToken', data.tokens.refresh);
       localStorage.setItem('user', JSON.stringify(data.user));
       toast.success('Login successful! Welcome back.');
-      // Redirect to home or profile page
-      navigate('/profile');
+      // Redirect superusers to admin panel, everyone else to home
+      if (isAdminUser()) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       setErrorMsg(error.message || 'Login failed');
     }

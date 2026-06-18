@@ -9,7 +9,6 @@ import 'package:lostify/core/utilies/assets/lotties/app_lotties.dart';
 import 'package:lostify/features/on_boarding/models/on_boarding_step_model.dart';
 import 'package:lostify/features/user/home/models/bottom_nav_item_model.dart';
 import 'package:lostify/features/user/home/views/widgets/home_tab_body.dart';
-import 'package:lostify/features/user/items/views/widgets/items_screen_body.dart';
 import 'package:lostify/features/user/my_ads/view_models/cubit/my_ads_cubit.dart';
 import 'package:lostify/features/user/my_ads/views/widgets/my_ads_screen_body.dart';
 import 'package:lostify/features/user/my_chats/view_models/cubit/my_chats_cubit.dart';
@@ -109,7 +108,6 @@ class AppConstants {
   // user screens
   static final List<Widget> userScreens = [
     const HomeTabBody(),
-    const ItemsScreenBody(),
     BlocProvider(
       create: (context) => MyAdsCubit(apiConsumer: getIt<ApiConsumer>()),
       child: const MyAdsScreenBody(),
@@ -120,10 +118,9 @@ class AppConstants {
     ),
     const SettingsScreenBody(),
   ];
-  // bottom nav items
+  // bottom nav items — SlidingClippedNavBar supports a maximum of 4 items
   static final List<BottomNavItem> bottomNavItems = [
     BottomNavItem(title: 'Home', icon: Icons.home),
-    BottomNavItem(title: 'Browse', icon: Icons.explore_outlined),
     BottomNavItem(title: 'My Ads', icon: Icons.inventory_2_outlined),
     BottomNavItem(title: 'Chats', icon: CupertinoIcons.chat_bubble_2),
     BottomNavItem(title: 'Settings', icon: CupertinoIcons.settings),

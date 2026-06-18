@@ -850,13 +850,6 @@ const Profile = () => {
                     </div>
                   )}
 
-                  <div className="mt-8 text-center">
-                    <Link to="/post-ad">
-                      <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/50">
-                        Post New Ad
-                      </Button>
-                    </Link>
-                  </div>
                 </div>
               </TabsContent>
 
